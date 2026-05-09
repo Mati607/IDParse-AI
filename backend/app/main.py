@@ -28,6 +28,7 @@ from app.extraction_quality import build_readiness_report
 from app.extraction_quality.rule_catalog import export_catalog_payload
 from app.preview_fill import build_fill_preview, normalize_merged_extracted
 from app.demo_samples import sample_merged_extraction
+from app.extraction_compare import compare_extractions_extended
 from app.routers import extraction_sessions
 from app.intake.router import router as intake_router
 from app.intake.retention import sweep_intake_retention
@@ -95,6 +96,28 @@ def preview_fill(body: dict = Body(...)):
     """
     normalized = normalize_merged_extracted(body if isinstance(body, dict) else {})
     return build_fill_preview(normalized)
+
+
+@app.post("/compare-extractions")
+def compare_extractions_endpoint(body: dict = Body(...)):
+    """
+    Compare two merged extraction payloads (passport + attorney dicts).
+
+    Returns per-field deltas for mapped form keys, fingerprints, unmapped keys, and a short narrative.
+    Request JSON: { \"left\": {...}, \"right\": {...}, \"label_left\": optional, \"label_right\": optional }.
+    """
+    if not isinstance(body, dict):
+        body = {}
+    left = body.get("left") if isinstance(body.get("left"), dict) else {}
+    right = body.get("right") if isinstance(body.get("right"), dict) else {}
+    label_left = body.get("label_left") if isinstance(body.get("label_left"), str) else None
+    label_right = body.get("label_right") if isinstance(body.get("label_right"), str) else None
+    return compare_extractions_extended(
+        left,
+        right,
+        label_left=label_left,
+        label_right=label_right,
+    )
 
 
 @app.get("/extraction-quality/rules")
