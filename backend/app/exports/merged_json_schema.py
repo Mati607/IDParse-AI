@@ -214,6 +214,14 @@ _SESSION_ENVELOPE: dict[str, Any] = {
             "maxItems": 20,
             "description": "Normalized lowercase labels for organizing and filtering saved sessions.",
         },
+        "citizen_id": {
+            "type": ["string", "null"],
+            "description": "Linked portal citizen profile id, if assigned.",
+        },
+        "citizen_display_name": {
+            "type": ["string", "null"],
+            "description": "Display name of the linked citizen at export time (informational).",
+        },
         "extracted": {
             "type": "object",
             "additionalProperties": False,

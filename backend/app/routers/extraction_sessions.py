@@ -18,6 +18,7 @@ from app import session_repository as session_repo
 from app.exports.csv_export import session_to_csv_text
 from app.exports.html_export import session_to_html
 from app.exports.merged_json_schema import schema_bundle
+from app import citizen_repository as citizen_repo
 from app.schemas.extraction_sessions import (
     CreateExtractionSessionRequest,
     ExtractionSessionListResponse,
@@ -39,6 +40,9 @@ def create_extraction_session(payload: CreateExtractionSessionRequest) -> dict[s
     merged = _as_merged_dict(payload.extracted)
     normalized = normalize_merged_extracted(merged)
     readiness = build_readiness_report(normalized)
+    cid = str(payload.citizen_id).strip() if payload.citizen_id else None
+    if cid and not citizen_repo.citizen_exists(cid):
+        raise HTTPException(status_code=400, detail="citizen_id does not exist.")
     sid = session_repo.create_session(
         normalized,
         title=payload.title,
@@ -48,6 +52,7 @@ def create_extraction_session(payload: CreateExtractionSessionRequest) -> dict[s
         notes=payload.notes,
         quality_snapshot=readiness,
         tags=payload.tags,
+        citizen_id=cid,
     )
     return {"id": sid, "readiness": readiness}
 
@@ -79,6 +84,15 @@ def list_extraction_sessions(
         None,
         description="If true, only sessions with a saved last_fill_json; if false, only without.",
     ),
+    citizen_id: str | None = Query(
+        None,
+        description="Only sessions linked to this citizen id.",
+        max_length=64,
+    ),
+    unassigned_only: bool = Query(
+        False,
+        description="If true, only sessions not linked to any citizen.",
+    ),
 ) -> ExtractionSessionListResponse:
     items, total = session_repo.list_sessions(
         limit=limit,
@@ -88,6 +102,8 @@ def list_extraction_sessions(
         min_score=min_score,
         grades=grade,
         has_fill=has_fill,
+        citizen_id=citizen_id,
+        unassigned_only=unassigned_only,
     )
     return ExtractionSessionListResponse(items=items, total=total, limit=limit, offset=offset)
 
@@ -119,6 +135,11 @@ def patch_extraction_session(session_id: str, payload: PatchExtractionSessionReq
     }
     if "tags" in payload.model_fields_set and payload.tags is not None:
         meta_kwargs["tags"] = list(payload.tags)
+    if "citizen_id" in payload.model_fields_set:
+        cid = str(payload.citizen_id).strip() if payload.citizen_id else None
+        if cid and not citizen_repo.citizen_exists(cid):
+            raise HTTPException(status_code=400, detail="citizen_id does not exist.")
+        meta_kwargs["citizen_id"] = cid
     ok = session_repo.update_session_metadata(session_id, **meta_kwargs)
     if not ok:
         raise HTTPException(status_code=404, detail="Session not found.")
@@ -173,6 +194,8 @@ def export_extraction_session(session_id: str) -> Response:
         "default_form_url": row["default_form_url"],
         "notes": row["notes"],
         "tags": row.get("tags") or [],
+        "citizen_id": row.get("citizen_id"),
+        "citizen_display_name": row.get("citizen_display_name"),
         "extracted": row.get("extracted"),
         "last_fill": row.get("last_fill"),
         "readiness": row.get("readiness"),

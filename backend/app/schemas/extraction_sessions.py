@@ -25,6 +25,7 @@ class CreateExtractionSessionRequest(BaseModel):
     g28_filename: str | None = Field(default=None, max_length=500)
     default_form_url: str | None = Field(default=None, max_length=2000)
     notes: str | None = Field(default=None, max_length=5000)
+    citizen_id: str | None = Field(default=None, max_length=64)
     tags: list[str] | None = Field(default=None, max_length=25)
 
     @field_validator("tags")
@@ -42,6 +43,7 @@ class PatchExtractionSessionRequest(BaseModel):
     title: str | None = Field(default=None, max_length=500)
     notes: str | None = Field(default=None, max_length=5000)
     default_form_url: str | None = Field(default=None, max_length=2000)
+    citizen_id: str | None = Field(default=None, max_length=64)
     tags: list[str] | None = Field(default=None, max_length=25)
 
     @field_validator("tags")

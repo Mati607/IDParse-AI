@@ -30,7 +30,7 @@ from app.preview_fill import build_fill_preview, normalize_merged_extracted
 from app.demo_samples import sample_merged_extraction
 from app.extraction_compare import compare_extractions_extended
 from app.extraction_compare_presets import get_preset, PRESET_PAIRS
-from app.routers import extraction_sessions
+from app.routers import citizens, extraction_sessions
 from app.intake.router import router as intake_router
 from app.intake.retention import sweep_intake_retention
 
@@ -43,8 +43,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="FormPilot – AI Document-to-Form Demo",
-    version="0.2.0",
+    title="Citizen Management Portal – IDParse",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
@@ -60,6 +60,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(
+    citizens.router,
+    prefix="/citizens",
+    tags=["citizens"],
+)
 app.include_router(
     extraction_sessions.router,
     prefix="/extraction-sessions",
