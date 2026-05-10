@@ -82,8 +82,63 @@ export async function previewFill(extracted) {
   return parseJsonOrThrow(res)
 }
 
-export async function listExtractionSessions(limit = 50, offset = 0) {
-  const res = await fetch(`${API_BASE}/extraction-sessions?limit=${limit}&offset=${offset}`)
+/**
+ * @param {object} [opts]
+ * @param {number} [opts.limit]
+ * @param {number} [opts.offset]
+ * @param {string} [opts.q] - search title, notes, filenames, extraction JSON
+ * @param {string[]} [opts.tag] - match any of these normalized tags
+ * @param {number} [opts.minScore] - minimum readiness score
+ * @param {string[]} [opts.grade] - readiness grades (e.g. A, B)
+ * @param {boolean|null} [opts.hasFill] - true / false to filter on last fill
+ */
+export async function listExtractionSessions(opts = {}, legacyOffset = 0) {
+  const o =
+    typeof opts === 'number'
+      ? { limit: opts, offset: legacyOffset }
+      : opts
+  const {
+    limit = 50,
+    offset = 0,
+    q,
+    tag = [],
+    minScore,
+    grade = [],
+    hasFill,
+  } = o
+
+  const sp = new URLSearchParams()
+  sp.set('limit', String(limit))
+  sp.set('offset', String(offset))
+  if (q != null && String(q).trim()) sp.set('q', String(q).trim())
+  if (Array.isArray(tag)) {
+    tag.forEach((t) => {
+      const s = String(t).trim()
+      if (s) sp.append('tag', s)
+    })
+  }
+  if (minScore != null && minScore !== '' && !Number.isNaN(Number(minScore))) {
+    sp.set('min_score', String(Number(minScore)))
+  }
+  if (Array.isArray(grade)) {
+    grade.forEach((g) => {
+      const s = String(g).trim().toUpperCase()
+      if (s) sp.append('grade', s)
+    })
+  }
+  if (hasFill === true) sp.set('has_fill', 'true')
+  if (hasFill === false) sp.set('has_fill', 'false')
+
+  const res = await fetch(`${API_BASE}/extraction-sessions?${sp.toString()}`)
+  return parseJsonOrThrow(res)
+}
+
+export async function patchExtractionSession(id, body) {
+  const res = await fetch(`${API_BASE}/extraction-sessions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
   return parseJsonOrThrow(res)
 }
 
